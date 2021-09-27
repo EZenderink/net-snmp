@@ -810,13 +810,16 @@ static struct node *
 alloc_node(int modid)
 {
     struct node    *np;
-    np = (struct node *) calloc(1, sizeof(struct node));
-    if (np) {
-        np->tc_index = -1;
-        np->modid = modid;
-	np->filename = strdup(File);
-	np->lineno = mibLine;
-    }
+
+    np = calloc(1, sizeof(struct node));
+    if (!np)
+        return NULL;
+
+    np->tc_index = -1;
+    np->modid = modid;
+    np->filename = strdup(File);
+    np->lineno = mibLine;
+
     return np;
 }
 
@@ -916,25 +919,16 @@ free_node(struct node *np)
     free_ranges(&np->ranges);
     free_indexes(&np->indexes);
     free_varbinds(&np->varbinds);
-    if (np->label)
-        free(np->label);
-    if (np->hint)
-        free(np->hint);
-    if (np->units)
-        free(np->units);
-    if (np->description)
-        free(np->description);
-    if (np->reference)
-        free(np->reference);
-    if (np->defaultValue)
-        free(np->defaultValue);
-    if (np->parent)
-        free(np->parent);
-    if (np->augments)
-        free(np->augments);
-    if (np->filename)
-	free(np->filename);
-    free((char *) np);
+    free(np->label);
+    free(np->hint);
+    free(np->units);
+    free(np->description);
+    free(np->reference);
+    free(np->defaultValue);
+    free(np->parent);
+    free(np->augments);
+    free(np->filename);
+    free(np);
 }
 
 static void
@@ -2021,10 +2015,8 @@ parse_objectid(FILE * fp, char *name)
                     goto err;
             } else {
                 if (!nop->label) {
-                    nop->label = (char *) malloc(20 + ANON_LEN);
-                    if (nop->label == NULL)
+                    if (asprintf(&nop->label, "%s%d", ANON, anonymous++) < 0)
                         goto err;
-                    sprintf(nop->label, "%s%d", ANON, anonymous++);
                 }
                 np->label = strdup(nop->label);
             }
@@ -2048,8 +2040,8 @@ out:
      * free the loid array 
      */
     for (count = 0, op = loid; count < length; count++, op++) {
-        if (op->label)
-            free(op->label);
+        free(op->label);
+        op->label = NULL;
     }
 
     return root;
